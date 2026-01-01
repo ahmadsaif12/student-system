@@ -1,0 +1,50 @@
+version: "3.9"
+
+services:
+  db:
+    image: postgres:15
+    restart: always
+    environment:
+      POSTGRES_USER: postgres
+      POSTGRES_PASSWORD: postgres
+      POSTGRES_DB: student_system
+    ports:
+      - "5432:5432"
+    volumes:
+      - postgres_data:/var/lib/postgresql/data
+
+  django:
+    build:
+      context: ./backend
+      dockerfile: Dockerfile
+    command: python core/manage.py runserver 0.0.0.0:8000
+    volumes:
+      - ./backend/core:/app/core
+    ports:
+      - "8000:8000"
+    environment:
+      - DATABASE_URL=postgres://postgres:postgres@db:5432/student_system
+      - DJANGO_ALLOWED_HOSTS=0.0.0.0 localhost 127.0.0.1
+    depends_on:
+      - db
+
+  fastapi:
+    build:
+      context: ./backend
+      dockerfile: Dockerfile
+    command: uvicorn fastapi_app.main:app --host 0.0.0.0 --port 8001 --reload
+    volumes:
+      - ./backend/fastapi_app:/app/fastapi_app
+    ports:
+      - "8001:8001"
+    environment:
+      - POSTGRES_USER=postgres
+      - POSTGRES_PASSWORD=postgres
+      - POSTGRES_DB=student_system
+      - POSTGRES_HOST=db
+      - POSTGRES_PORT=5432
+    depends_on:
+      - db
+
+volumes:
+  postgres_data:
